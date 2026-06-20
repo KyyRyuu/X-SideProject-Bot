@@ -1,6 +1,6 @@
 export default {
   command: ["sticker", "s", "stiker"],
-  tags: ["tools"],
+  tags: ["sticker"],
   help: ["sticker (reply image/video)"],
 
   async run(m, { converter, settings }) {

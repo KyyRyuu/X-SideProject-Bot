@@ -2,7 +2,7 @@ import { formatRuntime, formatSize } from "../../lib/helper.js";
 
 export default {
   command: ["runtime", "uptime", "status"],
-  tags: ["tools"],
+  tags: ["main"],
   help: ["runtime"],
 
   async run(m, { settings, registry }) {

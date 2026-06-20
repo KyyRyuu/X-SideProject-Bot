@@ -1,6 +1,6 @@
 export default {
   command: ["button", "btn", "buttondemo"],
-  tags: ["tools"],
+  tags: ["example"],
   help: ["button"],
 
   async run(m, { sock, settings }) {

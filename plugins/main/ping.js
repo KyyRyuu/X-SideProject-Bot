@@ -1,6 +1,6 @@
 export default {
   command: ["ping", "p"],
-  tags: ["tools"],
+  tags: ["main"],
   help: ["ping"],
 
   async run(m) {

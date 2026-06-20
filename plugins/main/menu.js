@@ -1,9 +1,9 @@
 const THUMB = "https://cdn.discordapp.my.id/cdn/887523.jpg";
-const FAVICON = "https://cdn.discordapp.my.id/cdn/7d621e.jpg";
+const FAVICON = "https://i.top4top.io/p_3817o60m70.png";
 
 export default {
   command: ["menu", "help", "list"],
-  tags: ["tools"],
+  tags: ["main"],
   help: ["menu"],
 
   async run(m, { sock, registry, settings, prefix }) {

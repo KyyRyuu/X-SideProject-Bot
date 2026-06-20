@@ -1,6 +1,6 @@
 export default {
   command: ["carousel"],
-  tags: ["utility"],
+  tags: ["example"],
   help: ["carousel"],
 
   async run(m, { sock }) {

@@ -3,8 +3,9 @@
 Framework bot WhatsApp yang **bersih, modular, dan production-ready** di atas
 **Baileys `7.0.0-rc13`**. Dilengkapi plugin hot-reload, penanganan LID/PN penuh,
 satu fungsi universal `sock.sendButton`, database yang bisa diganti adapter, dan
-store in-memory yang hemat memori — hampir seluruhnya memakai modul bawaan
-Node.js (dependency luar hanya `baileys`).
+store in-memory yang hemat memori — sebagian besar memakai modul bawaan Node.js.
+Dependency luar hanya tiga: `baileys` (koneksi WA), `cheerio` (parsing hasil
+konversi ezgif), dan `node-webpmux` (metadata pack stiker).
 
 > Dokumen ini dibuat agar **orang baru** cepat paham strukturnya dan tahu
 > **file mana yang harus diedit** untuk setiap kebutuhan.
@@ -102,22 +103,27 @@ membalas pesan error — **bot tetap hidup**.
 │   ├── cache.js          Cache TTL + LRU (dipakai retry & group cache)
 │   ├── logger.js         Logger ringan, kompatibel pino (untuk Baileys)
 │   ├── reload.js         Watcher fs.watch untuk hot reload plugin
-│   ├── converter.js      Konversi media via ffmpeg/webpmux (stiker, dll)
+│   ├── converter.js      Konversi media via ezgif.com (stiker, toimg, togif, tomp3)
+│   ├── ezgif.js          Klien ezgif.com (upload → convert → download)
 │   └── helper.js         Utilitas umum: run/exec/debounce/format/sleep
 │
 ├── plugins/
-│   ├── owner/    Hanya owner (exec, broadcast, mode, join, leave, backup)
-│   ├── group/    Manajemen grup (promote, kick, tagall, open/close, dll)
-│   ├── tools/    Umum (ping, runtime, menu, sticker, jid, button)
-│   ├── utility/  Konversi & demo (toimg, tomp4, carousel, locbutton)
-│   ├── downloader/  Unduhan (fetch)
-│   ├── admin/    Moderasi (ban, unban)
-│   ├── games/    Permainan (coinflip)
-│   └── ai/       (kosong, siap diisi plugin AI)
+│   ├── main/    Inti (menu, ping, runtime)
+│   ├── owner/   Hanya owner (exec, eval, broadcast, mode, join, leave, backup, plugins, upsw)
+│   ├── group/   Manajemen grup (promote, kick, tagall, open/close, welcome, dll)
+│   ├── admin/   Moderasi (ban, unban)
+│   ├── sticker/ Stiker (sticker, sprem)
+│   ├── tools/   Konversi media (toimg, togif, tomp3, jid, cdnwa)
+│   ├── downloader/  Unduhan (fetch, tiktok, instagram, facebook, mediafire, gitclone)
+│   ├── ai/      Plugin AI (gemini)
+│   └── example/ Contoh tombol (button, carousel, locbutton)
+│
+├── src/
+│   └── fetchContact.js   ContactBook: kumpulkan kontak dari address book user
 │
 ├── sessions/             Kredensial login (otomatis, JANGAN dibagikan)
-├── database/             File database.json (otomatis)
-└── temp/                 Berkas sementara (konversi media, backup)
+├── database/             database.json + contact.json (otomatis)
+└── temp/                 Berkas sementara (backup, sticker pack)
 ```
 
 ### Penjelasan singkat tiap file `lib/`
@@ -138,16 +144,25 @@ membalas pesan error — **bot tetap hidup**.
 - **`jid.js`** — `lidToPn`, `pnToLid`, `normalize`, `isGroup`, `isLid`, dll.
 - **`store.js`** — penyimpanan sementara di RAM, dibatasi agar tidak bocor.
 - **`database.js`** — data permanen di `database/database.json`.
-- **`cache.js` / `logger.js` / `reload.js` / `converter.js` / `helper.js`** —
-  utilitas pendukung; jarang perlu disentuh.
+- **`converter.js` / `ezgif.js`** — konversi media (stiker, toimg, togif, tomp3)
+  lewat ezgif.com; `ezgif.js` adalah klien upload→convert→download-nya.
+- **`cache.js` / `logger.js` / `reload.js` / `helper.js`** — utilitas pendukung;
+  jarang perlu disentuh.
+- **`src/fetchContact.js`** — `ContactBook`, mengumpulkan & menyimpan kontak
+  dari address book user (bukan dari peserta grup) ke `database/contact.json`.
 
 ---
 
 ## Kebutuhan Sistem
 
-- **Node.js >= 20** (memakai `fetch`, `structuredClone`, `fs.watch` rekursif).
-- **ffmpeg** & **webpmux** di `PATH` (opsional, untuk plugin stiker/media).
-  Debian/Ubuntu: `apt install ffmpeg webp`.
+- **Node.js >= 20** (memakai `fetch`, `FormData`/`Blob`, `structuredClone`,
+  `fs.watch` rekursif).
+- **Koneksi internet** — `sticker`, `toimg`, `togif`, dan `tomp3`/`toaudio`
+  mengonversi media lewat [ezgif.com](https://ezgif.com) (`lib/ezgif.js`),
+  bukan biner lokal seperti ffmpeg.
+- **Tanpa biner sistem (apt).** Metadata pack stiker disisipkan dengan paket
+  npm [`node-webpmux`](https://www.npmjs.com/package/node-webpmux) — cukup
+  `npm install`, tidak perlu `apt install ffmpeg webp` untuk fitur ini.
 
 ---
 
@@ -184,20 +199,20 @@ restart.
 
 ```js
 export default {
-  botName: "Saturn",
+  botName: "X - Side Project",
   ownerName: "IkyyKzy",
-  ownerNumber: ["6281246493375"],   // nomor owner, format internasional, tanpa +
+  ownerNumber: ["6281248845231"],   // nomor owner, format internasional, tanpa +
   prefix: [".", "!", "#"],          // "" = mode tanpa prefix
 
-  sticker: { packname: "Saturn", author: "Baileys v7" },
+  sticker: { packname: "X Side", author: "Baileys v7" },
   version: null,                    // null = ambil versi WA terbaru otomatis
-  sessionName: "saturn",            // nama folder di sessions/
+  sessionName: "x-side",            // nama folder di sessions/
 
   connection: {
-    usePairingCode: false,
+    usePairingCode: true,
     pairingNumber: "6281246493375",
-    browser: ["Saturn", "Chrome", "120.0.0"],
-    printQR: true,
+    browser: ["XBot", "Chrome", "120.0.0"],
+    printQR: false,
     markOnlineOnConnect: false,
     syncFullHistory: false,
     reconnectDelay: 2000,
@@ -208,7 +223,7 @@ export default {
     selfIgnore: false,   // true = abaikan pesan dari akun bot sendiri
     selfMode: true,      // true = hanya owner & bot yang bisa pakai (lihat di bawah)
     groups: true,
-    autoRead: false,
+    autoRead: true,
     autoTyping: false,
     cooldown: 2000       // jeda antar-command per user (ms)
   },
@@ -320,7 +335,7 @@ await sock.sendButton(jid, content, options)
 
 ```js
 await sock.sendButton(m.chat, {
-  title: "Saturn",          // judul header (opsional)
+  title: "X Side",          // judul header (opsional)
   subtitle: "Sub judul",    // opsional
   text: "Isi pesan",        // body (alias: body / caption)
   footer: "Footer",
@@ -352,7 +367,7 @@ buttons: [{ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text
 await sock.sendButton(m.chat, {
   image: "https://.../foto.jpg",   // Buffer atau URL
   text: "Dengan header gambar",
-  footer: "Saturn",
+  footer: "X Side",
   buttons: [{ type: "reply", text: "OK", id: "ok" }]
 });
 ```
@@ -381,7 +396,7 @@ await sock.sendButton(m.chat, {
   title: "Kantor",
   subtitle: "Tap di bawah",
   text: "Header lokasi",
-  footer: "Saturn",
+  footer: "X Side",
   location: { latitude: -6.2, longitude: 106.8166, name: "Jakarta", address: "Indonesia" },
   buttons: [{ type: "reply", text: "Ping", id: ".ping" }]
 });
@@ -447,7 +462,7 @@ await sock.sendWithThumbnail(
   m.chat,
   {
     text: "Selamat datang di menu bot!",
-    title: "Saturn Menu",
+    title: "X Side Menu",
     body: "Pilih perintah di bawah",
     thumbnailUrl: "https://cdn.discordapp.my.id/cdn/887523.jpg",
     faviconUrl: "https://cdn.discordapp.my.id/cdn/7d621e.jpg",
@@ -501,7 +516,7 @@ await sock.sendStickerPack(
   m.chat,
   {
     cover: "https://contoh.com/cover.png",
-    name: "Saturn Pack",
+    name: "X Side Pack",
     publisher: settings.botName,
     stickers: [
       "https://contoh.com/stiker1.webp",
@@ -574,8 +589,8 @@ Cukup implementasi 2 method, plugin tidak perlu diubah:
 // lib/database.js
 export class RedisAdapter {
   constructor(client) { this.client = client; }
-  async load() { return JSON.parse((await this.client.get("saturn:db")) || "{}"); }
-  async save(data) { await this.client.set("saturn:db", JSON.stringify(data)); }
+  async load() { return JSON.parse((await this.client.get("x-side:db")) || "{}"); }
+  async save(data) { await this.client.set("x-side:db", JSON.stringify(data)); }
 }
 
 // di dalam createDatabase():
@@ -610,17 +625,17 @@ disimpan di `temp/` dan tidak dikirim. **Ingat:** `.backup` penuh memuat
 ### VPS (systemd)
 
 ```ini
-# /etc/systemd/system/saturn.service
+# /etc/systemd/system/x-side.service
 [Unit]
-Description=Saturn WhatsApp Bot
+Description=X Side WhatsApp Bot
 After=network-online.target
 
 [Service]
-WorkingDirectory=/opt/saturn
+WorkingDirectory=/opt/x-side
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=5
-User=saturn
+User=x-side
 Environment=NODE_ENV=production
 
 [Install]
@@ -628,8 +643,8 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-sudo systemctl enable --now saturn
-journalctl -u saturn -f
+sudo systemctl enable --now x-side
+journalctl -u x-side -f
 ```
 
 ### Pterodactyl
@@ -643,7 +658,10 @@ journalctl -u saturn -f
 
 ```dockerfile
 FROM node:20-slim
-RUN apt-get update && apt-get install -y ffmpeg webp && rm -rf /var/lib/apt/lists/*
+# ffmpeg hanya opsional — dipakai sock.sendStickerPack untuk input non-WebP.
+# Fitur sticker/toimg/togif/tomp3 lewat ezgif.com tidak butuh biner apa pun.
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
@@ -663,7 +681,7 @@ hanya angka). Bila masih gagal: hentikan bot, hapus sesi lama, jalankan lagi
 untuk kode baru:
 
 ```bash
-rm -rf sessions/saturn
+rm -rf sessions/x-side
 npm start
 ```
 
@@ -674,7 +692,9 @@ diterima server WhatsApp). Masukkan kode di HP yang **nomornya sama** dengan
 **Bot diam saja saat dipakai orang lain.** Itu karena `selfMode: true`
 (default). Ubah ke `false` atau kirim `mode public` (owner).
 
-**Stiker / konversi gagal.** Pastikan `ffmpeg` dan `webp` (webpmux) terpasang.
+**Stiker / konversi gagal.** Fitur `sticker`, `toimg`, `togif`, dan
+`tomp3` mengonversi via ezgif.com — pastikan server punya akses internet, dan
+dependensi npm sudah ter-install (`npm install`).
 
 **Reconnect.** Bot reconnect otomatis dengan backoff untuk disconnect yang bisa
 dipulihkan, dan berhenti pada `loggedOut` / `connectionReplaced` / `forbidden` /
@@ -686,3 +706,50 @@ ulang.
 ## Lisensi
 
 MIT.
+
+---
+
+## Update Terbaru
+
+Ringkasan perubahan dari versi sebelumnya:
+
+### Konversi media pindah ke ezgif.com (pengganti ffmpeg)
+- **`lib/ezgif.js` (baru)** — klien ezgif.com: alur `upload → convert → download`
+  (multipart, parsing hasil dengan `cheerio`, ada timeout). Hasil reverse-engineer
+  form ezgif (perlu kirim field kanonik `percentage`/`background`, bukan hanya
+  varian visualnya — kalau tidak, server balas HTTP 500).
+- **`lib/converter.js` ditulis ulang** — semua konversi lewat ezgif:
+  - `toImage` → `webp-to-jpg` (stiker animasi diambil frame pertamanya).
+  - `toVideo` → `webp-to-mp4`.
+  - `toSticker` animasi → `video-to-webp` → **stiker WebP yang benar-benar
+    beranimasi** (square ~400px, 12fps, ≤6s, di bawah ~1MB); gambar diam →
+    `jpg/png-to-webp`.
+  - `toMp3` → `mp4-to-mp3` (audio dari video).
+
+### Fitur / command baru
+- **`.tomp3` / `.toaudio`** (`plugins/tools/tomp3.js`) — ekstrak audio MP3 dari
+  video lewat ezgif `mp4-to-mp3`.
+- **`.togif`** menggantikan `tomp4` — stiker animasi → video.
+- **`.toimg`** kini mendukung stiker animasi (mengambil frame pertama).
+
+### Tanpa biner sistem (apt) untuk stiker
+- Metadata pack stiker (EXIF) kini disisipkan dengan paket npm
+  **`node-webpmux`** (murni JS), menggantikan biner `webpmux` dari `apt`.
+  Mendukung WebP statis maupun animasi; bila gagal, stiker tetap terkirim tanpa
+  metadata. `ffmpeg` kini hanya dipakai `sock.sendStickerPack` untuk input
+  non-WebP.
+
+### Kontak hanya dari address book user
+- **`src/fetchContact.js`** — `ContactBook.sync()` tidak lagi memanen nomor dari
+  peserta grup (`groupFetchAllParticipating` & `harvestGroup` dihapus). Kontak
+  hanya dikumpulkan dari address book user (`contacts.upsert` /
+  `messaging-history.set`) lalu `resolveLids()` mengubah @lid menjadi nomor.
+
+### Reorganisasi plugin & lainnya
+- Plugin dirapikan: `main/` (menu, ping, runtime), `sticker/` (sticker, sprem),
+  `example/` (button, carousel, locbutton), plus tambahan `ai/gemini`,
+  beberapa `downloader/` (tiktok, instagram, facebook, mediafire, gitclone), dan
+  owner tools (`eval`, `plugins`, `upsw`).
+- Dependency luar: `baileys`, `cheerio`, `node-webpmux`.
+- Ditambahkan `.gitignore` (abaikan `node_modules/`, `sessions/`, runtime
+  `database/*.json`, `temp/`, `Test-media/`).

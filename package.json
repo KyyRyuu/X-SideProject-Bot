@@ -12,6 +12,8 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "baileys": "^7.0.0-rc13"
+    "baileys": "^7.0.0-rc13",
+    "cheerio": "^1.2.0",
+    "node-webpmux": "^3.2.1"
   }
 }

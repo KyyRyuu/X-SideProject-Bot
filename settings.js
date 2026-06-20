@@ -1,5 +1,5 @@
 export default {
-  botName: "X Side - Project",
+  botName: "X - Side Project",
   ownerName: "IkyyKzy",
 
   ownerNumber: ["6281248845231"],
@@ -28,9 +28,9 @@ export default {
 
   behaviour: {
     selfIgnore: false,
-    selfMode: true,
-    groups: true,
-    autoRead: false,
+    selfMode: true, // false = semua orang bisa pake
+    groups: true, // biar aktif di group
+    autoRead: true,
     autoTyping: false,
     cooldown: 2000
   },

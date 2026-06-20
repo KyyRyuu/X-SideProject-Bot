@@ -5,6 +5,7 @@ import settings from "./settings.js";
 import { createLogger } from "./lib/logger.js";
 import { createCache } from "./lib/cache.js";
 import { createStore } from "./lib/store.js";
+import { createContactBook } from "./src/fetchContact.js";
 import { createDatabase } from "./lib/database.js";
 import { createRegistry } from "./lib/plugins.js";
 import { createReloader } from "./lib/reload.js";
@@ -20,7 +21,11 @@ const logger = createLogger({ level: settings.logger.level });
 const baileysLogger = createLogger({ level: settings.logger.baileysLevel }).child({ module: "baileys" });
 
 const retryCache = createCache({ ttl: 3600, max: 5000 });
-const store = createStore({ logger: logger.child({ module: "store" }) });
+const contacts = createContactBook({
+  contactsPath: join(process.cwd(), "database", "contact.json"),
+  logger: logger.child({ module: "contacts" })
+});
+const store = createStore({ logger: logger.child({ module: "store" }), contacts });
 const db = createDatabase(settings.database, logger.child({ module: "db" }));
 const registry = createRegistry({ dir: join(process.cwd(), "plugins"), logger: logger.child({ module: "plugins" }) });
 
@@ -64,6 +69,8 @@ async function connect() {
     if (connection === "open") {
       reconnectAttempts = 0;
       logger.info(`connected as ${sock.user?.name || sock.user?.id}`);
+      // Resolve address-book contacts to numbers (deduped, persisted). Groups are not harvested.
+      contacts.sync(sock).catch((error) => logger.error(error, "contact sync failed"));
     }
 
     if (connection === "close") {
@@ -102,6 +109,7 @@ async function main() {
   logger.info(`starting ${settings.botName} on Baileys v7`);
 
   await db.init();
+  await contacts.load();
   await registry.loadAll();
   createReloader({ dir: join(process.cwd(), "plugins"), registry, logger: logger.child({ module: "reload" }) }).start();
 
@@ -115,6 +123,7 @@ const shutdown = async (signal) => {
   shuttingDown = true;
   logger.info(`received ${signal}, flushing database`);
   await db.save();
+  await contacts.save();
   process.exit(0);
 };
 process.on("SIGINT", () => shutdown("SIGINT"));

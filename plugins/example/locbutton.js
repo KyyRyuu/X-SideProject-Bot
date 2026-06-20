@@ -1,6 +1,6 @@
 export default {
   command: ["locbutton", "locbtn"],
-  tags: ["utility"],
+  tags: ["example"],
   help: ["locbutton"],
 
   async run(m, { sock }) {

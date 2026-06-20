@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# WhatsApp auth session (credentials — never commit)
+sessions/
+session/
+auth_info*/
+
+# Runtime data (databases, contacts, caches)
+database/*.json
+database/*.tmp
+temp/
+tmp/
+
+# Test assets
+Test-media/
+
+# Logs & env
+*.log
+.env
+.env.*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
